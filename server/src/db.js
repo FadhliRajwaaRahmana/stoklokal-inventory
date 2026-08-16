@@ -91,15 +91,22 @@ async function columnExists(table, column) {
 
 // Rebuild tabel untuk mengganti constraint UNIQUE global → UNIQUE per user.
 // Dijalankan dalam transaksi — gagal di tengah = rollback penuh (aman).
+// PENTING: copySql adalah FUNGSI yang menerima nama tabel LAMA (sudah di-rename
+// menjadi `<table>_old` saat INSERT dijalankan — kalau hardcode nama asli → error
+// "no such table").
 // `indexes`: daftar SQL yang dijalankan SETELAH commit (index hilang saat DROP TABLE).
 async function rebuildTable({ table, createSql, copySql, indexes }) {
+  // Matikan sementara FK — produk mereferensikan kategori yang di-rename/di-drop
+  // selama rebuild (tanpa ini: FOREIGN KEY constraint failed).
   const tx = await client.transaction();
   try {
+    await tx.execute(`PRAGMA defer_foreign_keys = ON`);
     await tx.execute(`ALTER TABLE ${table} RENAME TO ${table}_old`);
     await tx.execute(createSql);
-    await tx.execute(copySql);
+    await tx.execute(copySql(`${table}_old`));
     await tx.execute(`DROP TABLE ${table}_old`);
     await tx.execute(`ALTER TABLE ${table}_new RENAME TO ${table}`);
+    await tx.execute(`PRAGMA defer_foreign_keys = OFF`);
     await tx.commit();
   } catch (e) {
     await tx.rollback();
@@ -181,6 +188,75 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at);
   `);
 
+  // ---------- Pemulihan FK rusak (dari migrasi lama yang gagal di Turso) ----------
+  // Turso mengaktifkan foreign_keys=ON; jika ada tabel yang masih mereferensikan
+  // tabel hantu (_old) dari migrasi yang pernah gagal, setiap DELETE menyentuh
+  // cek FK → error "no such table: main.<tabel>_old". Deteksi & perbaiki:
+  // bangun ulang tabel tsb (drop + create + copy) dengan FK yang benar.
+  for (const table of ['transactions', 'products', 'categories']) {
+    try {
+      const fkRows = await client.execute(`PRAGMA foreign_key_list(${table})`);
+      const badRef = fkRows.rows.some((r) => String(r.table || '').endsWith('_old'));
+      if (badRef) {
+        console.warn(`[db] FK ${table} mereferensikan tabel hantu — rebuild…`);
+        const allRows = (await client.execute(`SELECT * FROM ${table}`)).rows;
+        await client.execute(`DROP TABLE IF EXISTS ${table}`);
+        if (table === 'transactions') {
+          await client.execute(`
+            CREATE TABLE transactions (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER REFERENCES users(id),
+              product_id INTEGER NOT NULL REFERENCES products(id),
+              type TEXT NOT NULL CHECK (type IN ('in', 'out')),
+              qty INTEGER NOT NULL,
+              note TEXT DEFAULT '',
+              created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+          `);
+        } else if (table === 'products') {
+          await client.execute(`
+            CREATE TABLE products (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER REFERENCES users(id),
+              name TEXT NOT NULL,
+              sku TEXT NOT NULL,
+              category_id INTEGER REFERENCES categories(id),
+              price REAL NOT NULL DEFAULT 0,
+              cost REAL NOT NULL DEFAULT 0,
+              stock INTEGER NOT NULL DEFAULT 0,
+              min_stock INTEGER NOT NULL DEFAULT 5,
+              image TEXT DEFAULT '',
+              created_at TEXT NOT NULL DEFAULT (datetime('now')),
+              UNIQUE(sku, user_id)
+            )
+          `);
+        } else {
+          await client.execute(`
+            CREATE TABLE categories (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER REFERENCES users(id),
+              name TEXT NOT NULL,
+              description TEXT DEFAULT '',
+              created_at TEXT NOT NULL DEFAULT (datetime('now')),
+              UNIQUE(name, user_id)
+            )
+          `);
+        }
+        if (allRows.length) {
+          const cols = Object.keys(allRows[0]).join(', ');
+          const marks = Object.keys(allRows[0]).map(() => '?').join(', ');
+          const ins = await client.execute(
+            `INSERT INTO ${table} (${cols}) VALUES (${marks})`,
+            allRows.map((r) => Object.values(r))
+          );
+          await ins; // pastikan flush
+        }
+      }
+    } catch {
+      /* abaikan — migrasi lain tetap jalan */
+    }
+  }
+
   // ---------- Migrasi idempotent untuk DB lama (sebelum multi-user) ----------
   // categories & products perlu REBUILD (ganti UNIQUE global → UNIQUE per user);
   // transactions cukup ADD COLUMN (tidak punya constraint UNIQUE).
@@ -195,8 +271,8 @@ export async function initDb() {
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         UNIQUE(name, user_id)
       )`,
-      copySql: `INSERT INTO categories_new (id, user_id, name, description, created_at)
-                SELECT id, NULL, name, description, created_at FROM categories`,
+      copySql: (oldTable) => `INSERT INTO categories_new (id, user_id, name, description, created_at)
+                SELECT id, NULL, name, description, created_at FROM ${oldTable}`,
     });
   }
 
@@ -217,8 +293,8 @@ export async function initDb() {
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         UNIQUE(sku, user_id)
       )`,
-      copySql: `INSERT INTO products_new (id, user_id, name, sku, category_id, price, cost, stock, min_stock, image, created_at)
-                SELECT id, NULL, name, sku, category_id, price, cost, stock, min_stock, image, created_at FROM products`,
+      copySql: (oldTable) => `INSERT INTO products_new (id, user_id, name, sku, category_id, price, cost, stock, min_stock, image, created_at)
+                SELECT id, NULL, name, sku, category_id, price, cost, stock, min_stock, image, created_at FROM ${oldTable}`,
       indexes: ['CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id)'],
     });
   }
@@ -231,4 +307,19 @@ export async function initDb() {
   await exec(`CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id)`);
   await exec(`CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_logs(user_id)`);
   await exec(`CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)`);
+
+  // ---------- Adopsi data yatim (dari era single-user) → akun admin ----------
+  // Data lama (sebelum multi-user) tidak punya user_id. Setelah migrasi kolom,
+  // data tersebut "yatim" — tidak terlihat oleh user mana pun. Adopsi ke admin
+  // (user pertama = email admin@demo.app) supaya data lama tetap terlihat.
+  const adminRow = await client.execute(`SELECT id FROM users WHERE email = 'admin@demo.app' LIMIT 1`);
+  const adminId = adminRow.rows[0]?.id ?? null;
+  if (adminId != null) {
+    await client.execute(`UPDATE categories SET user_id = ? WHERE user_id IS NULL`, [adminId]);
+    await client.execute(`UPDATE products SET user_id = ? WHERE user_id IS NULL`, [adminId]);
+    await client.execute(
+      `UPDATE transactions SET user_id = COALESCE((SELECT user_id FROM products WHERE products.id = transactions.product_id), ?) WHERE user_id IS NULL`,
+      [adminId]
+    );
+  }
 }
