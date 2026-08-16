@@ -127,7 +127,7 @@ export async function initDb() {
       name TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       password TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now', '+7 hours'))
     );
 
     CREATE TABLE IF NOT EXISTS categories (
@@ -135,7 +135,7 @@ export async function initDb() {
       user_id INTEGER REFERENCES users(id),
       name TEXT NOT NULL,
       description TEXT DEFAULT '',
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now', '+7 hours')),
       UNIQUE(name, user_id)
     );
 
@@ -150,7 +150,7 @@ export async function initDb() {
       stock INTEGER NOT NULL DEFAULT 0,
       min_stock INTEGER NOT NULL DEFAULT 5,
       image TEXT DEFAULT '',
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now', '+7 hours')),
       UNIQUE(sku, user_id)
     );
 
@@ -161,7 +161,7 @@ export async function initDb() {
       type TEXT NOT NULL CHECK (type IN ('in', 'out')),
       qty INTEGER NOT NULL,
       note TEXT DEFAULT '',
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now', '+7 hours'))
     );
 
     CREATE TABLE IF NOT EXISTS token_blacklist (
@@ -179,7 +179,7 @@ export async function initDb() {
       details TEXT NOT NULL DEFAULT '{}',
       ip TEXT DEFAULT '',
       user_agent TEXT DEFAULT '',
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now', '+7 hours'))
     );
 
     CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
@@ -210,7 +210,7 @@ export async function initDb() {
               type TEXT NOT NULL CHECK (type IN ('in', 'out')),
               qty INTEGER NOT NULL,
               note TEXT DEFAULT '',
-              created_at TEXT NOT NULL DEFAULT (datetime('now'))
+              created_at TEXT NOT NULL DEFAULT (datetime('now', '+7 hours'))
             )
           `);
         } else if (table === 'products') {
@@ -226,7 +226,7 @@ export async function initDb() {
               stock INTEGER NOT NULL DEFAULT 0,
               min_stock INTEGER NOT NULL DEFAULT 5,
               image TEXT DEFAULT '',
-              created_at TEXT NOT NULL DEFAULT (datetime('now')),
+              created_at TEXT NOT NULL DEFAULT (datetime('now', '+7 hours')),
               UNIQUE(sku, user_id)
             )
           `);
@@ -237,7 +237,7 @@ export async function initDb() {
               user_id INTEGER REFERENCES users(id),
               name TEXT NOT NULL,
               description TEXT DEFAULT '',
-              created_at TEXT NOT NULL DEFAULT (datetime('now')),
+              created_at TEXT NOT NULL DEFAULT (datetime('now', '+7 hours')),
               UNIQUE(name, user_id)
             )
           `);
@@ -268,7 +268,7 @@ export async function initDb() {
         user_id INTEGER REFERENCES users(id),
         name TEXT NOT NULL,
         description TEXT DEFAULT '',
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        created_at TEXT NOT NULL DEFAULT (datetime('now', '+7 hours')),
         UNIQUE(name, user_id)
       )`,
       copySql: (oldTable) => `INSERT INTO categories_new (id, user_id, name, description, created_at)
@@ -290,7 +290,7 @@ export async function initDb() {
         stock INTEGER NOT NULL DEFAULT 0,
         min_stock INTEGER NOT NULL DEFAULT 5,
         image TEXT DEFAULT '',
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        created_at TEXT NOT NULL DEFAULT (datetime('now', '+7 hours')),
         UNIQUE(sku, user_id)
       )`,
       copySql: (oldTable) => `INSERT INTO products_new (id, user_id, name, sku, category_id, price, cost, stock, min_stock, image, created_at)

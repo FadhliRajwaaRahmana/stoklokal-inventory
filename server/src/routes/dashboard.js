@@ -16,8 +16,10 @@ router.get('/', async (req, res) => {
   const lowStock = (await db.prepare('SELECT COUNT(*) AS n FROM products WHERE user_id = ? AND stock <= min_stock').get(uid)).n;
   const outOfStock = (await db.prepare('SELECT COUNT(*) AS n FROM products WHERE user_id = ? AND stock <= 0').get(uid)).n;
 
-  const now = new Date();
-  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  // Awal bulan dalam WIB — pakai SQLite (bukan JS Date) supaya zona WIB konsisten
+  const monthStart = (
+    await db.prepare(`SELECT strftime('%Y-%m-01', datetime('now', '+7 hours')) AS d`).get()
+  ).d;
 
   const movements = await db
     .prepare(`
@@ -35,13 +37,15 @@ router.get('/', async (req, res) => {
     .prepare(`SELECT COALESCE(SUM(qty), 0) AS n FROM transactions WHERE user_id = ? AND type = 'out' AND created_at >= ?`)
     .get(uid, monthStart);
 
+  // 7 hari terakhir dalam WIB — gunakan datetime('now', '+7 hours') supaya
+  // batas tanggal sesuai zona waktu data (bukan UTC server).
   const daily = await db
     .prepare(`
       SELECT date(created_at) AS day,
              COALESCE(SUM(CASE WHEN type = 'in' THEN qty END), 0) AS in_qty,
              COALESCE(SUM(CASE WHEN type = 'out' THEN qty END), 0) AS out_qty
       FROM transactions
-      WHERE user_id = ? AND created_at >= date('now', '-6 days')
+      WHERE user_id = ? AND created_at >= datetime('now', '+7 hours', '-6 days')
       GROUP BY date(created_at)
       ORDER BY day ASC
     `)

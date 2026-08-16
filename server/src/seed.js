@@ -110,7 +110,7 @@ export async function seed() {
   await db.prepare(`DELETE FROM transactions WHERE user_id = ? AND note LIKE 'seed:%'`).run(admin.id);
   const insertTx = db.prepare(
     `INSERT INTO transactions (user_id, product_id, type, qty, note, created_at)
-     VALUES (?, (SELECT id FROM products WHERE sku = ? AND user_id = ?), ?, ?, ?, datetime('now', ?))`
+     VALUES (?, (SELECT id FROM products WHERE sku = ? AND user_id = ?), ?, ?, ?, datetime('now', '+7 hours', ?))`
   );
   for (const [sku, type, qty, note, daysAgo] of TRANSACTIONS) {
     await insertTx.run(admin.id, `seed:${sku}`, admin.id, type, qty, `seed:${note}`, `-${daysAgo} days`);
