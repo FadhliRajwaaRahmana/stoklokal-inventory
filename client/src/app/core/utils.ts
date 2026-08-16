@@ -4,9 +4,14 @@
 // Server menyimpan datetime SQLite dalam UTC (datetime('now')) — selalu tampilkan WIB.
 export const WIB_TZ = 'Asia/Jakarta';
 
+// SQLite mengirim "YYYY-MM-DD HH:MM:SS" (UTC). Normalisasi:
+// 1) spasi → 'T' (format ISO yang valid lintas browser, termasuk Safari)
+// 2) pastikan suffix 'Z' (UTC) — tanpa ini browser menginterpretasikan sebagai
+//    WAKTU LOKAL, sehingga waktu tampil bergeser (salah) di semua timezone.
 function parseDate(iso: string | undefined | null): Date | null {
   if (!iso) return null;
-  const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
+  const norm = iso.replace(' ', 'T');
+  const d = new Date(norm.endsWith('Z') ? norm : norm + 'Z');
   return isNaN(d.getTime()) ? null : d;
 }
 

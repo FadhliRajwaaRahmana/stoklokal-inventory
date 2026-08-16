@@ -8,7 +8,7 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { DataService } from '../../core/services/data.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuditLog, actionMeta, entityLabel } from '../../core/models';
-import { WIB_TZ } from '../../core/utils';
+import { formatDate, formatTime } from '../../core/utils';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { SkeletonComponent } from '../../shared/components/skeleton/skeleton.component';
@@ -330,26 +330,11 @@ export class AuditComponent implements OnDestroy {
   }
 
   fmtTime(iso: string): string {
-    if (!iso) return '—';
-    const d = new Date(iso.endsWith('Z') ? iso : iso.replace(' ', 'T') + 'Z');
-    if (isNaN(d.getTime())) return iso;
-    return d.toLocaleTimeString('id-ID', {
-      timeZone: WIB_TZ,
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatTime(iso);
   }
 
   fmtDate(iso: string): string {
-    if (!iso) return '—';
-    const d = new Date(iso.endsWith('Z') ? iso : iso.replace(' ', 'T') + 'Z');
-    if (isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString('id-ID', {
-      timeZone: WIB_TZ,
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatDate(iso);
   }
 
   // Parse detail JSON → pasangan k/v untuk ditampilkan
