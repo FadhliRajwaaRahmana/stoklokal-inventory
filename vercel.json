@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm install && npm --prefix client install && npm --prefix server install",
   "buildCommand": "npm run build:prod",
   "outputDirectory": "client/dist/client/browser",
   "rewrites": [

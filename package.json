@@ -8,7 +8,7 @@
     "seed": "npm --prefix server run seed",
     "dev": "concurrently -n API,WEB -c yellow,cyan \"npm --prefix server run dev\" \"npm --prefix client start\"",
     "build": "npm --prefix client run build",
-    "build:prod": "npm --prefix client run build && node client/scripts/inject-api-base.js",
+    "build:prod": "npm --prefix client install && npm --prefix client run build && node client/scripts/inject-api-base.js",
     "start": "npm --prefix server start"
   },
   "devDependencies": {
