@@ -11,6 +11,7 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { SkeletonComponent } from '../../shared/components/skeleton/skeleton.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { ConfirmDialogService } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directive';
 
 @Component({
@@ -129,6 +130,7 @@ export class CategoriesComponent {
   private toast = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
+  private confirmDialog = inject(ConfirmDialogService);
 
   categories: Category[] = [];
   loading = true;
@@ -205,17 +207,21 @@ export class CategoriesComponent {
     });
   }
 
-  deleteCategory(c: Category): void {
+  async deleteCategory(c: Category): Promise<void> {
     const used = c.product_count ?? 0;
-    const msg =
-      used > 0
-        ? `Kategori "${c.name}" masih dipakai ${used} produk. Tidak dapat dihapus.`
-        : `Hapus kategori "${c.name}"?`;
     if (used > 0) {
-      this.toast.error(msg);
+      this.toast.error(`Kategori "${c.name}" masih dipakai ${used} produk. Tidak dapat dihapus.`);
       return;
     }
-    if (!confirm(msg)) return;
+    const ok = await this.confirmDialog.confirm({
+      title: `Hapus "${c.name}"?`,
+      message: 'Kategori ini akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.',
+      confirmLabel: 'Ya, Hapus',
+      cancelLabel: 'Batal',
+      tone: 'danger',
+      icon: 'trash',
+    });
+    if (!ok) return;
     this.dataService.deleteCategory(c.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success(`Kategori "${c.name}" dihapus`);

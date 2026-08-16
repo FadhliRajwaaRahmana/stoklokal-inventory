@@ -16,6 +16,7 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
 import { SkeletonComponent } from '../../shared/components/skeleton/skeleton.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { KawaiiSelectComponent } from '../../shared/components/kawaii-select/kawaii-select.component';
+import { ConfirmDialogService } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directive';
 
 @Component({
@@ -262,7 +263,7 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
     .search-box { position: relative; flex: 1; min-width: 200px; display: flex; align-items: center; }
     .search-box app-icon { position: absolute; left: 14px; color: #888; pointer-events: none; }
     .search-input { padding-left: 42px; }
-    .filter-select { width: auto; min-width: 160px; }
+    .filter-select { width: auto; min-width: 210px; }
     @media (max-width: 640px) {
       .toolbar { flex-direction: column; align-items: stretch; min-width: 0; }
       .search-box { min-width: 0; width: 100%; }
@@ -331,6 +332,7 @@ export class ProductsComponent implements OnDestroy {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
+  private confirmDialog = inject(ConfirmDialogService);
 
   categories: Category[] = [];
   products: Product[] = [];
@@ -562,8 +564,15 @@ export class ProductsComponent implements OnDestroy {
     });
   }
 
-  deleteProduct(p: Product): void {
-    const ok = confirm(`Hapus produk "${p.name}"? Riwayat transaksinya juga akan dihapus.`);
+  async deleteProduct(p: Product): Promise<void> {
+    const ok = await this.confirmDialog.confirm({
+      title: `Hapus "${p.name}"?`,
+      message: 'Produk dan seluruh riwayat transaksinya akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.',
+      confirmLabel: 'Ya, Hapus',
+      cancelLabel: 'Batal',
+      tone: 'danger',
+      icon: 'trash',
+    });
     if (!ok) return;
     this.dataService.deleteProduct(p.id).subscribe({
       next: () => {

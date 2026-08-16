@@ -117,7 +117,7 @@ export interface SelectOption<T = string | number> {
     .ks-trigger:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 #0a0a0a; }
     .ks-trigger--placeholder { color: #999; font-weight: 500; }
     .ks-trigger-icon { display: inline-flex; color: #e07a5f; flex-shrink: 0; }
-    .ks-trigger-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ks-trigger-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
     .ks-caret {
       display: inline-flex; color: #0a0a0a; flex-shrink: 0;
       transition: transform .25s cubic-bezier(.34,1.56,.64,1);
@@ -131,7 +131,8 @@ export interface SelectOption<T = string | number> {
        - min-height: 0 — bukan max-height saja, supaya kontainer tidak menyusut
          hingga tak terlihat opsi saat di dalam flex container (toolbar) */
     .ks-menu {
-      position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 9999;
+      position: absolute; top: calc(100% + 8px); left: 0; z-index: 9999;
+      min-width: 100%; width: max-content; max-width: min(360px, 90vw);
       background: #fff; border: 3px solid #0a0a0a; border-radius: 16px;
       box-shadow: 6px 6px 0 #0a0a0a; overflow: hidden;
       animation: ksPop .22s cubic-bezier(.34,1.56,.64,1) both;
@@ -182,7 +183,7 @@ export interface SelectOption<T = string | number> {
     .ks-item--disabled { opacity: .45; cursor: not-allowed; }
     .ks-item-icon { display: inline-flex; color: #e07a5f; flex-shrink: 0; }
     .ks-item--selected .ks-item-icon { color: #0a0a0a; }
-    .ks-item-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ks-item-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
     .ks-item-check { display: inline-flex; color: #0a0a0a; flex-shrink: 0; }
     .ks-empty { padding: 16px; text-align: center; color: #999; font-size: .85rem; font-weight: 600; }
 
