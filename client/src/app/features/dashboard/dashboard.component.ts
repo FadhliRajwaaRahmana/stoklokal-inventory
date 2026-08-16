@@ -7,7 +7,7 @@ import Chart from 'chart.js/auto';
 import { DataService } from '../../core/services/data.service';
 import { ToastService } from '../../core/services/toast.service';
 import { DashboardData, Product, stockStatus } from '../../core/models';
-import { formatRupiah, timeAgo as timeAgoFn } from '../../core/utils';
+import { formatRupiah, nowWIB, timeAgo as timeAgoFn, WIB_TZ } from '../../core/utils';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { StatCardComponent } from '../../shared/components/stat-card/stat-card.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
@@ -299,11 +299,7 @@ export class DashboardComponent implements OnDestroy {
         next: (d) => {
           this.data = d;
           this.initChart(d);
-          this.lastUpdated = new Date().toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-          });
+          this.lastUpdated = nowWIB(); // WIB (UTC+7) — bukan timezone browser
           // Zoneless: beri tahu Angular bahwa state berubah dari async (fetch)
           this.cdr.markForCheck();
         },
@@ -342,10 +338,10 @@ export class DashboardComponent implements OnDestroy {
     const ins: number[] = [];
     const outs: number[] = [];
     for (let i = 6; i >= 0; i--) {
-      const dt = new Date();
-      dt.setDate(dt.getDate() - i);
-      const key = dt.toISOString().slice(0, 10);
-      labels.push(dt.toLocaleDateString('id-ID', { weekday: 'short' }));
+      // Tanggal 7 hari terakhir dalam WIB — konsisten dengan data server (UTC)
+      const dt = new Date(Date.now() - i * 86400000);
+      const key = dt.toLocaleDateString('en-CA', { timeZone: WIB_TZ }); // YYYY-MM-DD
+      labels.push(dt.toLocaleDateString('id-ID', { timeZone: WIB_TZ, weekday: 'short' }));
       const day = d.daily.find((x) => x.day === key);
       ins.push(day?.in_qty ?? 0);
       outs.push(day?.out_qty ?? 0);

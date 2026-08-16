@@ -6,7 +6,7 @@ import { Subscription } from 'rxjs';
 import { animate } from 'motion';
 import { AuthService } from '../../core/services/auth.service';
 import { LenisService } from '../../core/services/lenis.service';
-import { initials } from '../../core/utils';
+import { initials, WIB_TZ } from '../../core/utils';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
 interface NavItem {
@@ -226,7 +226,13 @@ export class AppLayoutComponent implements OnDestroy {
   }
 
   get todayLabel(): string {
-    return new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    return new Date().toLocaleDateString('id-ID', {
+      timeZone: WIB_TZ,
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
   }
 
   isActive(item: NavItem): boolean {

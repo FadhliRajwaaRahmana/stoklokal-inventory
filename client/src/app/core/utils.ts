@@ -1,26 +1,60 @@
 // core/utils.ts — helper format
+
+// Paksa parse ke timezone Indonesia Barat (WIB, UTC+7) terlepas dari timezone browser.
+// Server menyimpan datetime SQLite dalam UTC (datetime('now')) — selalu tampilkan WIB.
+export const WIB_TZ = 'Asia/Jakarta';
+
+function parseDate(iso: string | undefined | null): Date | null {
+  if (!iso) return null;
+  const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
+  return isNaN(d.getTime()) ? null : d;
+}
+
 export function formatRupiah(n: number | undefined | null): string {
   const v = Number(n) || 0;
   return 'Rp ' + v.toLocaleString('id-ID');
 }
 
 export function formatDate(iso: string | undefined | null): string {
-  if (!iso) return '-';
-  const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  const d = parseDate(iso);
+  if (!d) return '-';
+  return d.toLocaleDateString('id-ID', { timeZone: WIB_TZ, day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-export function formatDateTime(iso: string | undefined | null): string {
-  if (!iso) return '-';
-  const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) +
+export function formatTime(iso: string | undefined | null, withSeconds = false): string {
+  const d = parseDate(iso);
+  if (!d) return '—';
+  return d.toLocaleTimeString('id-ID', {
+    timeZone: WIB_TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(withSeconds ? { second: '2-digit' } : {}),
+  });
+}
+
+export function formatDateTime(iso: string | undefined | null, withSeconds = false): string {
+  const d = parseDate(iso);
+  if (!d) return '-';
+  return (
+    d.toLocaleDateString('id-ID', { timeZone: WIB_TZ, day: 'numeric', month: 'short', year: 'numeric' }) +
     ' · ' +
-    d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    formatTime(iso, withSeconds)
+  );
+}
+
+// Waktu "sekarang" dalam WIB — untuk indicator real-time (dashboard, dll)
+export function nowWIB(withSeconds = true): string {
+  return new Date().toLocaleTimeString('id-ID', {
+    timeZone: WIB_TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(withSeconds ? { second: '2-digit' } : {}),
+  });
 }
 
 export function timeAgo(iso: string | undefined | null): string {
-  if (!iso) return '-';
-  const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
+  const d = parseDate(iso);
+  if (!d) return '-';
   const diff = Date.now() - d.getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'baru saja';
