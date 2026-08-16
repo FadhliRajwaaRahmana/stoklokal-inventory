@@ -261,10 +261,10 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
     .search-input { padding-left: 42px; }
     .filter-select { width: auto; min-width: 160px; }
     @media (max-width: 640px) {
-      .toolbar { flex-direction: column; align-items: stretch; }
-      .search-box { min-width: 0; }
+      .toolbar { flex-direction: column; align-items: stretch; min-width: 0; }
+      .search-box { min-width: 0; width: 100%; }
       .filter-select { width: 100%; min-width: 0; }
-      .filter-chips { justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+      .filter-chips { flex-wrap: wrap; overflow: hidden; padding-bottom: 0; }
       .chip { white-space: nowrap; }
     }
     .filter-chips { display: flex; gap: 8px; flex-wrap: wrap; }

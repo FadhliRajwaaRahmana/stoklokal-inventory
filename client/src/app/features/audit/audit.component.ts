@@ -188,11 +188,12 @@ interface ParsedDetails {
   `,
   styles: [`
     :host { display: block; }
-    .card { background: #fff; border: 3px solid #0a0a0a; border-radius: 24px; box-shadow: 4px 4px 0 #0a0a0a; }
-    .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px; margin-bottom: 16px; }
+    .card { background: #fff; border: 3px solid #0a0a0a; border-radius: 24px; box-shadow: 4px 4px 0 #0a0a0a; max-width: 100%; }
+    .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px; margin-bottom: 16px; max-width: 100%; min-width: 0; }
     .search-box { position: relative; flex: 1; min-width: 200px; display: flex; align-items: center; }
     .search-box app-icon { position: absolute; left: 14px; color: #888; pointer-events: none; }
     .search-input { padding-left: 42px; }
+    :host { display: block; max-width: 100%; overflow: hidden; }
     .filter-chips { display: flex; gap: 8px; flex-wrap: wrap; }
     .chip {
       padding: 8px 14px; border-radius: 9999px; border: 2px solid #0a0a0a; font-weight: 800;
@@ -201,9 +202,13 @@ interface ParsedDetails {
     .chip:hover { transform: translateY(-2px); box-shadow: 2px 2px 0 #0a0a0a; }
     .chip--active { background: #f8be9e; box-shadow: 3px 3px 0 #0a0a0a; }
     @media (max-width: 640px) {
-      .toolbar { flex-direction: column; align-items: stretch; }
-      .search-box { min-width: 0; }
-      .filter-chips { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+      .toolbar { flex-direction: column; align-items: stretch; min-width: 0; }
+      .search-box { min-width: 0; width: 100%; }
+      .search-box input { width: 100%; min-width: 0; }
+      /* Chips WRAP ke baris baru — bukan scroll horizontal (chip bocor ke kanan
+         kalau nowrap + overflow-x:auto karena lebar kontainer dihitung salah) */
+      .filter-chips { flex-wrap: wrap; overflow: hidden; padding-bottom: 0; }
+      .chip { font-size: .72rem; padding: 6px 12px; }
     }
 
     .table-card { padding: 0; overflow: clip; }
