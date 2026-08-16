@@ -32,7 +32,7 @@ function clientIp(req) {
 // ---------- Validasi ----------
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const ip = clientIp(req);
   if (!rateLimitFailed(ip)) {
     return res.status(429).json({ message: 'Terlalu banyak percobaan. Coba lagi 15 menit lagi.' });
@@ -51,11 +51,11 @@ router.post('/register', (req, res) => {
   if (String(password).length < 6 || String(password).length > 72) {
     return res.status(400).json({ message: 'Password harus 6–72 karakter' });
   }
-  const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(normalizedEmail);
+  const exists = await db.prepare('SELECT id FROM users WHERE email = ?').get(normalizedEmail);
   if (exists) return res.status(409).json({ message: 'Email sudah terdaftar' });
 
   const hash = bcrypt.hashSync(String(password), 10);
-  const info = db
+  const info = await db
     .prepare('INSERT INTO users (name, email, password) VALUES (?, ?, ?)')
     .run(name.trim(), normalizedEmail, hash);
   recordSuccess(ip);
@@ -63,7 +63,7 @@ router.post('/register', (req, res) => {
   res.status(201).json({ token: signToken(user), user });
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const ip = clientIp(req);
   if (!rateLimitFailed(ip)) {
     return res.status(429).json({ message: 'Terlalu banyak percobaan. Coba lagi 15 menit lagi.' });
@@ -71,7 +71,7 @@ router.post('/login', (req, res) => {
   const { email, password } = req.body || {};
   if (!email?.trim() || !password) return res.status(400).json({ message: 'Email dan password wajib diisi' });
 
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(String(email).trim().toLowerCase());
+  const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(String(email).trim().toLowerCase());
   if (!user || !bcrypt.compareSync(String(password), user.password)) {
     return res.status(401).json({ message: 'Email atau password salah' });
   }
@@ -83,9 +83,9 @@ router.post('/login', (req, res) => {
 router.get('/me', authRequired, (req, res) => res.json({ user: req.user }));
 
 // Logout: revoke token (masuk blacklist sampai expiry) — token lama tidak bisa dipakai lagi
-router.post('/logout', authRequired, (req, res) => {
+router.post('/logout', authRequired, async (req, res) => {
   const exp = req.tokenExp;
-  if (req.tokenJti && exp) revokeToken(req.tokenJti, exp);
+  if (req.tokenJti && exp) await revokeToken(req.tokenJti, exp);
   res.json({ ok: true });
 });
 

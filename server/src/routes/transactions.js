@@ -13,21 +13,21 @@ function safeInt(v, fallback, min, max) {
   return Math.min(Math.max(Math.floor(n), min), max);
 }
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const q = req.query || {};
   const where = [];
-  const params = {};
+  const args = [];
   if (q.type === 'in' || q.type === 'out') {
-    where.push('t.type = @type');
-    params.type = q.type;
+    where.push('t.type = ?');
+    args.push(q.type);
   }
   const pid = Number(q.product_id);
   if (Number.isInteger(pid) && pid > 0) {
-    where.push('t.product_id = @product_id');
-    params.product_id = pid;
+    where.push('t.product_id = ?');
+    args.push(pid);
   }
   const whereSql = where.length ? ` WHERE ${where.join(' AND ')}` : '';
-  const count = db.prepare(`SELECT COUNT(*) AS n FROM transactions t${whereSql}`).get(params).n;
+  const count = await db.prepare(`SELECT COUNT(*) AS n FROM transactions t${whereSql}`).get(...args).n;
 
   // Pagination divalidasi aman: NaN/Infinity/negatif → fallback
   const limit = safeInt(q.limit, 50, 1, 200);
@@ -41,15 +41,15 @@ router.get('/', (req, res) => {
       JOIN products p ON p.id = t.product_id
       ${whereSql}
       ORDER BY t.created_at DESC, t.id DESC
-      LIMIT @limit OFFSET @offset
+      LIMIT ? OFFSET ?
     `)
-    .all({ ...params, limit, offset });
+    .all(...args, limit, offset);
 
   res.json({ rows, total: count });
 });
 
 // Stok masuk / keluar (keluar divalidasi tidak boleh minus)
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const b = req.body || {};
   const productId = Number(b.product_id);
   const qty = Number(b.qty);
@@ -68,7 +68,7 @@ router.post('/', (req, res) => {
   if (!type) return res.status(400).json({ message: 'Tipe transaksi harus in atau out' });
   if (note.length > 255) return res.status(400).json({ message: 'Catatan terlalu panjang' });
 
-  const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId);
+  const product = await db.prepare('SELECT * FROM products WHERE id = ?').get(productId);
   if (!product) return res.status(404).json({ message: 'Produk tidak ditemukan' });
 
   if (type === 'out' && product.stock < qty) {
@@ -76,25 +76,23 @@ router.post('/', (req, res) => {
   }
 
   let insertedId = null;
-  // node:sqlite tidak punya db.transaction() — pakai BEGIN/COMMIT/ROLLBACK manual
-  db.exec('BEGIN');
-  try {
-    const info = db.prepare('INSERT INTO transactions (product_id, type, qty, note) VALUES (?, ?, ?, ?)').run(
-      productId,
-      type,
-      qty,
-      note
+  // Transaksi atomik — pakai db.transaction() (Turso resmi, query memakai tx)
+  await db.transaction(async (tx) => {
+    const txPrepare = (sql) => ({
+      async run(...args) {
+        const res = await tx.execute({ sql, args: args.length === 1 && Array.isArray(args[0]) ? args[0] : args });
+        return { changes: res.rowsAffected, lastInsertRowid: res.lastInsertRowid };
+      },
+    });
+    const info = await txPrepare('INSERT INTO transactions (product_id, type, qty, note) VALUES (?, ?, ?, ?)').run(
+      [productId, type, qty, note]
     );
-    insertedId = info.lastInsertRowid;
+    insertedId = Number(info.lastInsertRowid);
     const delta = type === 'in' ? qty : -qty;
-    db.prepare('UPDATE products SET stock = stock + ? WHERE id = ?').run(delta, productId);
-    db.exec('COMMIT');
-  } catch (txErr) {
-    db.exec('ROLLBACK');
-    throw txErr;
-  }
+    await txPrepare('UPDATE products SET stock = stock + ? WHERE id = ?').run([delta, productId]);
+  });
 
-  const updated = db.prepare(`${SELECT} WHERE p.id = ?`).get(productId);
+  const updated = await db.prepare(`${SELECT} WHERE p.id = ?`).get(productId);
   res.status(201).json({ transaction: { id: insertedId, product_id: productId, type, qty, note }, product: updated });
 });
 

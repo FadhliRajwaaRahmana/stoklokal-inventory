@@ -48,7 +48,7 @@
 | Teknologi | Fungsi |
 |---|---|
 | **Node.js + Express 5** | REST API |
-| **node:sqlite** | Database (built-in Node 22+, tanpa native compile — aman di serverless) |
+| **Turso (libSQL)** | Database SQLite cloud — **permanen** & persisten di serverless (local file SQLite di dev) |
 | **JWT (jsonwebtoken)** | Autentikasi + token revocation |
 | **bcryptjs** | Hash password |
 | **helmet + cors** | Keamanan headers & CORS whitelist |
@@ -75,7 +75,7 @@ inventory-management/
 │   └── src/
 │       ├── index.js        # entry (support serverless)
 │       ├── app.js          # express app factory
-│       ├── db.js           # node:sqlite schema
+│       ├── db.js           # Turso/libSQL client (cloud) + file SQLite (dev)
 │       ├── seed.js         # data demo
 │       ├── middleware/auth.js
 │       └── routes/         # auth, products, categories, transactions, dashboard, stats
@@ -88,7 +88,7 @@ inventory-management/
 
 ## 🚀 Menjalankan Lokal
 
-**Prasyarat:** Node.js ≥ 22 (untuk `node:sqlite`)
+**Prasyarat:** Node.js ≥ 22 (untuk Vercel gunakan Node 24.x — lihat `engines` di package.json)
 
 ```bash
 # 1. Install dependencies
@@ -151,12 +151,14 @@ Project sudah dikonfigurasi untuk **monorepo Vercel** (frontend + backend satu d
 2. Vercel → **Import Repository**
 3. Root: `/`, Build: `npm run build:prod` (otomatis dari `vercel.json`), Output: `client/dist/client/browser`
 4. Set environment variables:
+   - `TURSO_DATABASE_URL` — URL database Turso (contoh: `libsql://<db>.turso.io`) — **WAJIB**
+   - `TURSO_AUTH_TOKEN` — token auth Turso — **WAJIB**
    - `JWT_SECRET` — string acak panjang (WAJIB)
    - `SEED_PASSWORD` — password demo
    - `CORS_ORIGINS` — origin frontend (opsional)
 5. Deploy 🎉
 
-> ⚠️ **Catatan:** SQLite di serverless = **tidak persisten** (in-memory, hilang saat cold start). Cocok untuk demo/preview. Untuk produksi permanen, migrasikan ke **Supabase/Postgres** (struktur tabel sudah dirancang 1:1).
+> ✅ **Data PERMANEN:** Database memakai **Turso** (SQLite cloud). Data tetap tersimpan meski serverless cold start. Buat database gratis di [Turso](https://turso.tech) (`turso db create <nama>` → `turso db tokens create <nama>`), lalu isi `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`. Tanpa env tersebut (dev lokal), otomatis fallback ke file SQLite lokal `server/data/inventory.db`.
 
 ---
 

@@ -4,3 +4,9 @@ server/data/
 *.log
 .DS_Store
 .env
+
+# Secret & local DB
+.env.local
+*.db
+*.db-wal
+*.db-shm

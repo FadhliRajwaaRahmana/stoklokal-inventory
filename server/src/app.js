@@ -2,7 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { db } from './db.js';
+import { db, initDb } from './db.js';
 import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
 import categoryRoutes from './routes/categories.js';
@@ -18,6 +18,9 @@ function resolveOrigins() {
 }
 
 export async function createApp() {
+  // Inisialisasi schema (Turso cloud / file lokal) sebelum route dipakai
+  await initDb();
+
   const app = express();
 
   // Security headers (helmet): X-Content-Type-Options, X-Frame-Options, dll.

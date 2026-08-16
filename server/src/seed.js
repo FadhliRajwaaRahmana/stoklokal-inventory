@@ -1,7 +1,7 @@
-// seed.js — data demo: jalankan `node src/seed.js`
+// seed.js — data demo: jalankan `node src/seed.js` [async — Turso]
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
-import { db } from './db.js';
+import { db, initDb } from './db.js';
 
 const SEED = `
   INSERT INTO categories (name, description) VALUES
@@ -34,7 +34,6 @@ const PRODUCTS = [
 ];
 
 const TRANSACTIONS = [
-  // [sku, type, qty, note, daysAgo]
   ['ELEK-001', 'in', 20, 'Restock supplier utama', 6],
   ['ELEK-001', 'out', 12, 'Penjualan online', 4],
   ['ELEK-002', 'in', 50, 'PO #INV-2041', 5],
@@ -53,34 +52,36 @@ const TRANSACTIONS = [
   ['BEAUTY-003', 'out', 3, 'Penjualan online', 0],
 ];
 
-function seed() {
-  // Password demo: env SEED_PASSWORD atau acak (jangan hardcode lemah di produksi)
+export async function seed() {
+  await initDb();
+  // Password demo: env SEED_PASSWORD atau acak
   const demoPass = process.env.SEED_PASSWORD || crypto.randomBytes(9).toString('base64url');
   const hash = bcrypt.hashSync(demoPass, 10);
-  db.exec(SEED);
-  db.prepare('INSERT INTO users (name, email, password) VALUES (?, ?, ?) ON CONFLICT(email) DO NOTHING')
+  await db.exec(SEED);
+  await db
+    .prepare('INSERT INTO users (name, email, password) VALUES (?, ?, ?) ON CONFLICT(email) DO UPDATE SET password = excluded.password')
     .run('Admin Demo', 'admin@demo.app', hash);
 
   const insertProduct = db.prepare(
     `INSERT OR IGNORE INTO products (name, sku, category_id, price, cost, stock, min_stock)
      VALUES (?, ?, (SELECT id FROM categories WHERE name = ?), ?, ?, ?, ?)`
   );
-  PRODUCTS.forEach(([name, sku, cat, price, cost, stock, min]) => {
-    insertProduct.run(name, sku, cat, price, cost, stock, min);
-  });
+  for (const [name, sku, cat, price, cost, stock, min] of PRODUCTS) {
+    await insertProduct.run(name, sku, cat, price, cost, stock, min);
+  }
 
-  // Idempotent: hapus transaksi seed lama (ditandai note khusus) sebelum insert ulang
-  db.prepare(`DELETE FROM transactions WHERE note LIKE 'seed:%'`).run();
+  // Idempotent: hapus transaksi seed lama sebelum insert ulang
+  await db.prepare(`DELETE FROM transactions WHERE note LIKE 'seed:%'`).run();
   const insertTx = db.prepare(
     `INSERT INTO transactions (product_id, type, qty, note, created_at)
      VALUES ((SELECT id FROM products WHERE sku = ?), ?, ?, ?, datetime('now', ?))`
   );
-  TRANSACTIONS.forEach(([sku, type, qty, note, daysAgo]) => {
-    insertTx.run(sku, type, qty, `seed:${note}`, `-${daysAgo} days`);
-  });
+  for (const [sku, type, qty, note, daysAgo] of TRANSACTIONS) {
+    await insertTx.run(sku, type, qty, `seed:${note}`, `-${daysAgo} days`);
+  }
 
-  // Sinkronkan stok dengan riwayat (agar stok awal konsisten dengan transaksi)
-  db.exec(`
+  // Sinkronkan stok dengan riwayat
+  await db.exec(`
     UPDATE products SET stock = stock - COALESCE((
       SELECT SUM(qty) FROM transactions t
       WHERE t.product_id = products.id AND t.type = 'out'
@@ -89,7 +90,12 @@ function seed() {
 
   console.log('[seed] Data demo berhasil dimuat');
   console.log(`[seed] Login demo: admin@demo.app / ${process.env.SEED_PASSWORD ? 'SEED_PASSWORD (dari env)' : demoPass}`);
-  console.log('[seed] PENTING: di produksi set SEED_PASSWORD env sebelum seed.');
 }
 
-seed();
+// Jalankan langsung saat `node src/seed.js`
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seed().catch((e) => {
+    console.error('[seed] Gagal:', e.message);
+    process.exit(1);
+  });
+}
