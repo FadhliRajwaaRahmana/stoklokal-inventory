@@ -7,7 +7,7 @@ import Chart from 'chart.js/auto';
 import { DataService } from '../../core/services/data.service';
 import { ToastService } from '../../core/services/toast.service';
 import { DashboardData, Product, stockStatus } from '../../core/models';
-import { formatRupiah, nowWIB, timeAgo as timeAgoFn, WIB_TZ } from '../../core/utils';
+import { formatRupiah, nowDeviceFull, timeAgo as timeAgoFn, WIB_TZ } from '../../core/utils';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { StatCardComponent } from '../../shared/components/stat-card/stat-card.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
@@ -29,7 +29,10 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
       <div class="header-actions">
         <span class="live-indicator" title="Data diperbarui otomatis setiap 30 detik">
           <span class="live-dot"></span>
-          {{ lastUpdated ? 'Terakhir update ' + lastUpdated : 'Memuat...' }}
+          <span class="live-text">
+            <span class="live-label">Terakhir update</span>
+            <time class="live-clock">{{ liveClock }}</time>
+          </span>
         </span>
         <button class="btn btn-primary" routerLink="/transactions" (click)="goTransactions()">
           <app-icon name="plus" [size]="18" /> Catat Transaksi
@@ -184,16 +187,34 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
     .error-box .btn { margin-left: auto; }
     .header-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
     .live-indicator {
-      display: inline-flex; align-items: center; gap: 7px;
-      font-size: .74rem; font-weight: 800; color: #555;
-      background: #fff; border: 2px solid #0a0a0a; border-radius: 9999px;
-      padding: 6px 12px; box-shadow: 2px 2px 0 #0a0a0a;
+      display: inline-flex; align-items: center; gap: 10px;
+      background: #fff; border: 2px solid #0a0a0a; border-radius: 18px;
+      padding: 8px 14px; box-shadow: 2px 2px 0 #0a0a0a;
+      transition: transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s;
     }
+    .live-indicator:hover { transform: translateY(-2px); box-shadow: 4px 4px 0 #0a0a0a; }
     .live-dot {
-      width: 8px; height: 8px; border-radius: 50%; background: #2e7d32;
-      animation: livePulse 1.6s ease-in-out infinite;
+      width: 10px; height: 10px; border-radius: 50%; background: #2e7d32; flex-shrink: 0;
+      animation: livePulse 1.3s ease-in-out infinite;
+      box-shadow: 0 0 0 3px rgba(46,125,50,.2);
     }
-    @keyframes livePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.7); } }
+    .live-text { display: flex; flex-direction: column; line-height: 1.15; }
+    .live-label {
+      font-size: .62rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .08em; color: #999;
+    }
+    .live-clock {
+      font-family: 'Nunito', sans-serif; font-weight: 900; font-size: .78rem;
+      color: #0a0a0a; font-variant-numeric: tabular-nums; /* angka tidak goyang saat detik berganti */
+    }
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 3px rgba(46,125,50,.2); }
+      50% { opacity: .45; transform: scale(.75); box-shadow: 0 0 0 6px rgba(46,125,50,0); }
+    }
+    @media (max-width: 560px) {
+      .live-clock { font-size: .72rem; }
+      .live-indicator { padding: 7px 11px; border-radius: 14px; }
+    }
     @media (max-width: 560px) {
       .page-header { align-items: flex-start; gap: 12px; margin-bottom: 20px; }
       .page-title { font-size: 1.35rem; }
@@ -255,22 +276,38 @@ export class DashboardComponent implements OnDestroy {
 
   data: DashboardData | null = null;
   errorMessage: string | null = null;
-  lastUpdated: string | null = null; // waktu update terakhir (real-time indicator)
+  liveClock: string = ''; // jam real-time (ticking tiap detik) — mengikuti timezone device
+  lastUpdatedStamp = 0;   // waktu fetch terakhir (ms) — dipakai untuk animasi refresh
   private chart?: Chart;
   private autoRefresh?: ReturnType<typeof setInterval>;
+  private clockTick?: ReturnType<typeof setInterval>;
 
   constructor() {
     this.load();
     // REAL-TIME: auto-refresh data setiap 30 detik (tanpa reload halaman)
-    // interval di-cleanup otomatis saat komponen hancur (OnDestroy)
     this.autoRefresh = setInterval(() => {
       // Hanya refresh jika halaman terlihat (hemat resource di background tab)
       if (!document.hidden) this.load(true);
     }, 30_000);
+
+    // Jam berjalan real-time — tampilkan tanggal & waktu sesuai timezone device
+    // pengguna, update detik (tidak hanya saat data refresh).
+    this.updateClock();
+    this.clockTick = setInterval(() => {
+      if (!document.hidden) this.updateClock();
+    }, 1000);
+  }
+
+  private updateClock(): void {
+    this.liveClock = nowDeviceFull();
+    // Zoneless: tidak perlu markForCheck di sini — string berubah & CD cukup
+    // (bukan async external; interval callback zoneless tetap butuh markForCheck)
+    this.cdr.markForCheck();
   }
 
   ngOnDestroy(): void {
     if (this.autoRefresh) clearInterval(this.autoRefresh);
+    if (this.clockTick) clearInterval(this.clockTick);
     this.chart?.destroy();
   }
 
@@ -299,7 +336,8 @@ export class DashboardComponent implements OnDestroy {
         next: (d) => {
           this.data = d;
           this.initChart(d);
-          this.lastUpdated = nowWIB(); // WIB (UTC+7) — bukan timezone browser
+          // Tandai waktu fetch — liveClock tetap berjalan sendiri (timezone device)
+          this.lastUpdatedStamp = Date.now();
           // Zoneless: beri tahu Angular bahwa state berubah dari async (fetch)
           this.cdr.markForCheck();
         },

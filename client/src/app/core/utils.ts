@@ -57,6 +57,42 @@ export function nowWIB(withSeconds = true): string {
   });
 }
 
+// Waktu lengkap "sekarang" dalam TIMEZONE DEVICE (bukan paksa WIB) —
+// untuk indikator "Terakhir update" yang mengikuti jam perangkat pengguna.
+export function nowDeviceFull(): string {
+  const d = new Date();
+  const date = d.toLocaleDateString('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const time = d.toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  return `${date} · ${time}`;
+}
+
+// Format datetime dari DB (tersimpan WIB) ke tampilan TIMEZONE DEVICE
+// (created_at WIB di DB → ditampilkan sesuai jam perangkat pengguna).
+export function formatDateTimeDevice(iso: string | undefined | null, withSeconds = false): string {
+  const d = parseDate(iso);
+  if (!d) return '-';
+  const date = d.toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+  const time = d.toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(withSeconds ? { second: '2-digit' } : {}),
+  });
+  return `${date} · ${time}`;
+}
+
 export function timeAgo(iso: string | undefined | null): string {
   const d = parseDate(iso);
   if (!d) return '-';
