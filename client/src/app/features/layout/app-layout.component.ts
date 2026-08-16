@@ -186,6 +186,7 @@ export class AppLayoutComponent implements OnDestroy {
     { label: 'Produk', route: '/products', icon: 'box' },
     { label: 'Kategori', route: '/categories', icon: 'tag' },
     { label: 'Transaksi', route: '/transactions', icon: 'repeat' },
+    { label: 'Audit Log', route: '/audit', icon: 'clipboard' },
   ];
 
   pageTitle = 'Dashboard';

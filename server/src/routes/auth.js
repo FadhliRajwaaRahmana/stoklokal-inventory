@@ -3,6 +3,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../db.js';
 import { signToken, authRequired, revokeToken } from '../middleware/auth.js';
+import { logAudit, auditContext } from '../audit.js';
 
 const router = Router();
 
@@ -60,6 +61,16 @@ router.post('/register', async (req, res) => {
     .run(name.trim(), normalizedEmail, hash);
   recordSuccess(ip);
   const user = { id: info.lastInsertRowid, name: name.trim(), email: normalizedEmail };
+  await logAudit({
+    userId: user.id,
+    actor: user.name,
+    action: 'register',
+    entity: 'user',
+    entityId: user.id,
+    details: { email: normalizedEmail },
+    ip,
+    ua: auditContext(req).ua,
+  });
   res.status(201).json({ token: signToken(user), user });
 });
 
@@ -73,10 +84,33 @@ router.post('/login', async (req, res) => {
 
   const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(String(email).trim().toLowerCase());
   if (!user || !bcrypt.compareSync(String(password), user.password)) {
+    // Login gagal tercatat atas nama user TERSANGKA (jika email terdaftar) —
+    // pemilik akun bisa melihat percobaan login gagal ke akunnya sendiri.
+    const suspect = user ? { id: user.id, name: user.name } : null;
+    await logAudit({
+      userId: suspect?.id ?? null,
+      actor: suspect?.name ?? '',
+      action: 'login_failed',
+      entity: 'user',
+      entityId: suspect?.id ?? null,
+      details: { email: String(email).trim().toLowerCase() },
+      ip,
+      ua: auditContext(req).ua,
+    });
     return res.status(401).json({ message: 'Email atau password salah' });
   }
   recordSuccess(ip);
   const safe = { id: user.id, name: user.name, email: user.email, created_at: user.created_at };
+  await logAudit({
+    userId: user.id,
+    actor: user.name,
+    action: 'login',
+    entity: 'user',
+    entityId: user.id,
+    details: { email: user.email },
+    ip,
+    ua: auditContext(req).ua,
+  });
   res.json({ token: signToken(safe), user: safe });
 });
 
@@ -86,6 +120,16 @@ router.get('/me', authRequired, (req, res) => res.json({ user: req.user }));
 router.post('/logout', authRequired, async (req, res) => {
   const exp = req.tokenExp;
   if (req.tokenJti && exp) await revokeToken(req.tokenJti, exp);
+  await logAudit({
+    userId: req.user.id,
+    actor: req.user.name,
+    action: 'logout',
+    entity: 'user',
+    entityId: req.user.id,
+    details: {},
+    ip: auditContext(req).ip,
+    ua: auditContext(req).ua,
+  });
   res.json({ ok: true });
 });
 

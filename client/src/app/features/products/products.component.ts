@@ -229,7 +229,8 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
       (close)="qtyModal = false"
     >
       <p class="qty-info">
-        {{ qtyType === 'in' ? '➕ Tambah stok' : '➖ Kurangi stok' }}
+        <app-icon [name]="qtyType === 'in' ? 'arrow-down' : 'arrow-up'" [size]="16" />
+        {{ qtyType === 'in' ? 'Tambah stok' : 'Kurangi stok' }}
         <strong>{{ qtyProduct?.name }}</strong> (stok saat ini: <strong>{{ qtyProduct?.stock }}</strong>)
       </p>
       <div class="field">
@@ -314,7 +315,7 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     @media (max-width: 560px) { .grid-2 { grid-template-columns: 1fr; } }
     .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
-    .qty-info { font-size: .95rem; margin-bottom: 14px; color: #333; }
+    .qty-info { font-size: .95rem; margin-bottom: 14px; color: #333; display: flex; align-items: center; gap: 6px; }
     .qty-info strong { color: #0a0a0a; }
   `],
 })

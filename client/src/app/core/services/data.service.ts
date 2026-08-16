@@ -1,8 +1,16 @@
-// core/services/data.service.ts — akses data API terpusat (products, categories, transactions, dashboard)
+// core/services/data.service.ts — akses data API terpusat (products, categories, transactions, dashboard, audit)
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../api.service';
-import { Category, DashboardData, Product, ProductListResponse, Transaction, TransactionListResponse } from '../models';
+import {
+  AuditListResponse,
+  Category,
+  DashboardData,
+  Product,
+  ProductListResponse,
+  Transaction,
+  TransactionListResponse,
+} from '../models';
 
 export interface ProductQuery {
   search?: string;
@@ -84,5 +92,21 @@ export class DataService {
   // ---------- Dashboard ----------
   getDashboard(): Observable<DashboardData> {
     return this.api.get<DashboardData>('/api/dashboard');
+  }
+
+  // ---------- Audit Log ----------
+  getAuditLogs(q: {
+    action?: string;
+    entity?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  } = {}): Observable<AuditListResponse> {
+    const params = new URLSearchParams();
+    Object.entries(q).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') params.set(k, String(v));
+    });
+    const qs = params.toString();
+    return this.api.get<AuditListResponse>(`/api/audit${qs ? `?${qs}` : ''}`);
   }
 }

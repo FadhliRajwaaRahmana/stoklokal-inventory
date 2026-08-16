@@ -9,6 +9,7 @@ import categoryRoutes from './routes/categories.js';
 import transactionRoutes from './routes/transactions.js';
 import dashboardRoutes from './routes/dashboard.js';
 import statsRoutes from './routes/stats.js';
+import auditRoutes from './routes/audit.js';
 
 // CORS whitelist — dev: localhost:4200; prod: set CORS_ORIGINS env (koma-terpisah)
 function resolveOrigins() {
@@ -55,6 +56,7 @@ export async function createApp() {
   app.use('/api/transactions', transactionRoutes);
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/stats', statsRoutes); // publik (landing page)
+  app.use('/api/audit', auditRoutes); // riwayat audit (auth)
 
   // 404 JSON (bukan HTML default Express)
   app.use((_req, res) => res.status(404).json({ message: 'Endpoint tidak ditemukan' }));

@@ -1,7 +1,9 @@
 // routes/transactions.js — stok masuk/keluar dengan validasi, riwayat + pagination
+// Multi-user: semua query di-scope user_id, mutasi dicatat ke audit_logs.
 import { Router } from 'express';
 import { db } from '../db.js';
 import { authRequired } from '../middleware/auth.js';
+import { logAudit, auditContext, toSnapshot } from '../audit.js';
 
 const router = Router();
 router.use(authRequired);
@@ -15,8 +17,8 @@ function safeInt(v, fallback, min, max) {
 
 router.get('/', async (req, res) => {
   const q = req.query || {};
-  const where = [];
-  const args = [];
+  const where = ['t.user_id = ?'];
+  const args = [req.user.id];
   if (q.type === 'in' || q.type === 'out') {
     where.push('t.type = ?');
     args.push(q.type);
@@ -26,14 +28,16 @@ router.get('/', async (req, res) => {
     where.push('t.product_id = ?');
     args.push(pid);
   }
-  const whereSql = where.length ? ` WHERE ${where.join(' AND ')}` : '';
-  const count = await db.prepare(`SELECT COUNT(*) AS n FROM transactions t${whereSql}`).get(...args).n;
+  const whereSql = ` WHERE ${where.join(' AND ')}`;
+  const count = (await db
+    .prepare(`SELECT COUNT(*) AS n FROM transactions t${whereSql}`)
+    .get(...args)).n;
 
   // Pagination divalidasi aman: NaN/Infinity/negatif → fallback
   const limit = safeInt(q.limit, 50, 1, 200);
   const offset = safeInt(q.offset, 0, 0, 1_000_000);
 
-  const rows = db
+  const rows = await db
     .prepare(`
       SELECT t.id, t.product_id, t.type, t.qty, t.note, t.created_at,
              p.name AS product_name, p.sku AS product_sku
@@ -68,7 +72,10 @@ router.post('/', async (req, res) => {
   if (!type) return res.status(400).json({ message: 'Tipe transaksi harus in atau out' });
   if (note.length > 255) return res.status(400).json({ message: 'Catatan terlalu panjang' });
 
-  const product = await db.prepare('SELECT * FROM products WHERE id = ?').get(productId);
+  // Produk harus milik user ini (lintas-user → 404)
+  const product = await db
+    .prepare('SELECT * FROM products WHERE id = ? AND user_id = ?')
+    .get(productId, req.user.id);
   if (!product) return res.status(404).json({ message: 'Produk tidak ditemukan' });
 
   if (type === 'out' && product.stock < qty) {
@@ -76,6 +83,7 @@ router.post('/', async (req, res) => {
   }
 
   let insertedId = null;
+  let after = null;
   // Transaksi atomik — pakai db.transaction() (Turso resmi, query memakai tx)
   await db.transaction(async (tx) => {
     const txPrepare = (sql) => ({
@@ -84,23 +92,39 @@ router.post('/', async (req, res) => {
         return { changes: res.rowsAffected, lastInsertRowid: res.lastInsertRowid };
       },
     });
-    const info = await txPrepare('INSERT INTO transactions (product_id, type, qty, note) VALUES (?, ?, ?, ?)').run(
-      [productId, type, qty, note]
+    const info = await txPrepare('INSERT INTO transactions (user_id, product_id, type, qty, note) VALUES (?, ?, ?, ?, ?)').run(
+      [req.user.id, productId, type, qty, note]
     );
     insertedId = Number(info.lastInsertRowid);
     const delta = type === 'in' ? qty : -qty;
-    await txPrepare('UPDATE products SET stock = stock + ? WHERE id = ?').run([delta, productId]);
+    await txPrepare('UPDATE products SET stock = stock + ? WHERE id = ? AND user_id = ?').run([delta, productId, req.user.id]);
   });
 
-  const updated = await db.prepare(`${SELECT} WHERE p.id = ?`).get(productId);
-  res.status(201).json({ transaction: { id: insertedId, product_id: productId, type, qty, note }, product: updated });
-});
+  after = await db
+    .prepare('SELECT id, name, sku, category_id, price, cost, stock, min_stock, image, created_at FROM products WHERE id = ?')
+    .get(productId);
 
-const SELECT = `
-  SELECT p.id, p.name, p.sku, p.category_id, p.price, p.cost, p.stock, p.min_stock, p.image, p.created_at,
-         c.name AS category_name
-  FROM products p
-  LEFT JOIN categories c ON c.id = p.category_id
-`;
+  await logAudit({
+    userId: req.user.id,
+    actor: req.user.name,
+    action: type === 'in' ? 'stock_in' : 'stock_out',
+    entity: 'transaction',
+    entityId: insertedId,
+    details: {
+      product: { id: product.id, name: product.name, sku: product.sku },
+      qty,
+      stock_before: product.stock,
+      stock_after: after.stock,
+      note,
+    },
+    ip: auditContext(req).ip,
+    ua: auditContext(req).ua,
+  });
+
+  res.status(201).json({
+    transaction: { id: insertedId, product_id: productId, type, qty, note },
+    product: after,
+  });
+});
 
 export default router;

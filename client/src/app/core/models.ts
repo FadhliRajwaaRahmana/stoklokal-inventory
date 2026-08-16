@@ -85,3 +85,50 @@ export interface AuthResponse {
   token: string;
   user: User;
 }
+
+// ---------- Audit log ----------
+export interface AuditLog {
+  id: number;
+  user_id: number;
+  actor: string;
+  action: string; // create | update | delete | login | login_failed | register | logout | stock_in | stock_out
+  entity: string; // product | category | transaction | user
+  entity_id: number | null;
+  details: string; // JSON snapshot (before/after)
+  ip: string;
+  user_agent: string;
+  created_at: string;
+}
+
+export interface AuditListResponse {
+  rows: AuditLog[];
+  total: number;
+}
+
+// Label user-facing + warna badge per aksi
+export const ACTION_META: Record<string, { label: string; cls: string }> = {
+  create: { label: 'Buat', cls: 'action-create' },
+  update: { label: 'Ubah', cls: 'action-update' },
+  delete: { label: 'Hapus', cls: 'action-delete' },
+  login: { label: 'Login', cls: 'action-login' },
+  login_failed: { label: 'Login Gagal', cls: 'action-login-failed' },
+  register: { label: 'Daftar', cls: 'action-register' },
+  logout: { label: 'Logout', cls: 'action-logout' },
+  stock_in: { label: 'Stok Masuk', cls: 'action-stock-in' },
+  stock_out: { label: 'Stok Keluar', cls: 'action-stock-out' },
+};
+
+export const ENTITY_META: Record<string, string> = {
+  product: 'Produk',
+  category: 'Kategori',
+  transaction: 'Transaksi',
+  user: 'User',
+};
+
+export function actionMeta(action: string): { label: string; cls: string } {
+  return ACTION_META[action] ?? { label: action, cls: 'action-other' };
+}
+
+export function entityLabel(entity: string): string {
+  return ENTITY_META[entity] ?? entity;
+}

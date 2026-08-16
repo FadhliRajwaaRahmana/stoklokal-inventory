@@ -34,6 +34,10 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/transactions/transactions.component').then((m) => m.TransactionsComponent),
       },
+      {
+        path: 'audit',
+        loadComponent: () => import('./features/audit/audit.component').then((m) => m.AuditComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

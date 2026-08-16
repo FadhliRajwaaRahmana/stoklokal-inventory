@@ -26,6 +26,8 @@
 | 📦 **Manajemen Produk** | CRUD lengkap: search (debounce), filter kategori & status, sort, pagination, quick stock in/out |
 | 🏷️ **Kategori** | CRUD + hitung produk per kategori, proteksi hapus saat masih dipakai |
 | 🔄 **Transaksi** | Stok masuk/keluar dengan **validasi stok tidak pernah minus**, riwayat lengkap + filter tipe |
+| 📋 **Audit Log** | **Jejak semua aktivitas tercatat detail**: login/logout/register (termasuk login gagal), buat/ubah/hapus produk-kategori-transaksi dengan **snapshot sebelum → sesudah**, IP & user-agent, filter + search |
+| 👤 **Multi-user** | Setiap akun punya **data sendiri** (isolasi penuh via user_id — user lain tidak bisa melihat/mengubah data Anda), statistik publik di landing tetap **mengakumulasi semua user** |
 | 🎨 **UI/UX Premium** | Desain **Kawaii Pop** (border hitam tebal, shadow chunky, rounded besar, pastel), animasi GSAP ScrollTrigger + Lenis smooth scroll + Motion, dropdown custom **searchable** dengan debounce |
 | 📱 **Responsive** | Mobile-first — sidebar jadi drawer, tabel scroll horizontal, semua halaman rapi di HP |
 | 🔒 **Security** | JWT secret random, CORS whitelist, helmet headers, validasi input lengkap, SQL injection-safe (prepared statements), rate limit |
@@ -79,7 +81,7 @@ inventory-management/
 │       ├── seed.js         # data demo
 │       ├── middleware/auth.js
 │       └── routes/         # auth, products, categories, transactions, dashboard, stats
-├── test-api.sh             # 47 API test (semua endpoint & method)
+├── test-api.sh             # 63 API test (endpoint, isolasi multi-user, audit trail)
 ├── vercel.json             # deploy config monorepo
 └── package.json            # scripts (dev, build, build:prod)
 ```
@@ -105,7 +107,8 @@ npm run dev
 
 - **Frontend:** http://localhost:4200
 - **Backend:** http://localhost:5000
-- **Akun demo:** `admin@demo.app` / `admin123`
+- **Akun demo 1:** `admin@demo.app` / `admin123` (katalog 17 produk)
+- **Akun demo 2:** `user2@demo.app` / `admin123` (katalog 5 produk — bukti isolasi per user)
 
 > Jika `SEED_PASSWORD` tidak di-set, password demo digenerate acak (ditampilkan di console).
 
@@ -128,6 +131,7 @@ Semua endpoint (kecuali `login/register/health/stats`) butuh header `Authorizati
 | GET/POST | `/api/categories` | List / buat |
 | PUT/DELETE | `/api/categories/:id` | Ubah / hapus |
 | GET/POST | `/api/transactions` | Riwayat / catat in-out |
+| GET | `/api/audit` | Riwayat audit (filter aksi/entitas, search, pagination) |
 | GET | `/api/health` | Health check |
 
 ---
@@ -135,11 +139,11 @@ Semua endpoint (kecuali `login/register/health/stats`) butuh header `Authorizati
 ## 🧪 Testing
 
 ```bash
-# Jalankan 47 test otomatis (butuh backend di :5000)
+# Jalankan 63 test otomatis (butuh backend di :5000)
 bash test-api.sh
 ```
 
-Cakupan test: semua method (GET/POST/PUT/DELETE), validasi (email, angka, panjang, tipe), security (rate limit, CORS, token revocation, SQL injection), edge case (NaN/Infinity, wildcard search).
+Cakupan test: semua method (GET/POST/PUT/DELETE), validasi (email, angka, panjang, tipe), security (rate limit, CORS, token revocation, SQL injection), edge case (NaN/Infinity, wildcard search), **isolasi multi-user** (user lain tidak bisa akses data Anda), **audit trail** (login, create, update before/after, login gagal tercatat).
 
 ---
 
