@@ -121,13 +121,17 @@ export interface SelectOption<T = string | number> {
     .ks--open .ks-trigger { box-shadow: 5px 5px 0 #0a0a0a; transform: translateY(-1px); }
     .ks--error .ks-trigger { border-color: #ff7096; box-shadow: 3px 3px 0 #ff7096; }
 
-    /* ----- Menu ----- */
+    /* ----- Menu (FIX: tidak terpotong) -----
+       - z-index SANGAT TINGGI (di atas card & table-card yang punya overflow clip)
+       - min-height: 0 — bukan max-height saja, supaya kontainer tidak menyusut
+         hingga tak terlihat opsi saat di dalam flex container (toolbar) */
     .ks-menu {
-      position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 100;
+      position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 9999;
       background: #fff; border: 3px solid #0a0a0a; border-radius: 16px;
       box-shadow: 6px 6px 0 #0a0a0a; overflow: hidden;
       animation: ksPop .22s cubic-bezier(.34,1.56,.64,1) both;
       transform-origin: top center;
+      min-height: 0;
     }
     .ks-menu--up { top: auto; bottom: calc(100% + 8px); transform-origin: bottom center; }
     @keyframes ksPop {
@@ -139,6 +143,7 @@ export interface SelectOption<T = string | number> {
     .ks-search {
       display: flex; align-items: center; gap: 8px;
       padding: 10px 12px; border-bottom: 2px solid #f0ece7; position: relative;
+      flex-shrink: 0;
     }
     .ks-search-icon { color: #999; flex-shrink: 0; }
     .ks-search-input {
@@ -191,7 +196,7 @@ export class KawaiiSelectComponent<T = string | number> implements OnDestroy {
   @Input() label = '';
   @Input() ariaLabel = '';
   @Input() error = false;
-  @Input() menuUp = false;
+  @Input() menuUpInput = false; // fallback manual (jika user mau paksa ke atas)
   @Input() searchable = false; // aktifkan input pencarian
   @Input() searchPlaceholder = 'Ketik untuk mencari...';
   @Output() valueChange = new EventEmitter<T | null>();
@@ -235,10 +240,13 @@ export class KawaiiSelectComponent<T = string | number> implements OnDestroy {
     return opt.value === this.value;
   }
 
+  menuUp = false; // state flip otomatis (dihitung saat buka)
+
   toggle(): void {
     this.open = !this.open;
     if (this.open) {
       this.searchTerm = '';
+      this.menuUp = this.menuUpInput || this.shouldFlipUp();
       // Fokus search input otomatis setelah menu buka
       setTimeout(() => {
         const input = this.el.nativeElement.querySelector<HTMLInputElement>('.ks-search-input');
@@ -246,6 +254,14 @@ export class KawaiiSelectComponent<T = string | number> implements OnDestroy {
       }, 60);
     }
     this.cdr.markForCheck();
+  }
+
+  // Flip menu ke atas jika ruang di bawah tidak cukup (dekat tepi layar/mobile)
+  private shouldFlipUp(): boolean {
+    const host = this.el.nativeElement;
+    const rect = host.getBoundingClientRect();
+    const estHeight = 300; // estimasi tinggi menu (search + list max 230px)
+    return rect.bottom + estHeight > window.innerHeight;
   }
 
   onSearch(v: string): void {
