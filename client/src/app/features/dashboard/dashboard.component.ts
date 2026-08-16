@@ -233,7 +233,11 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
     .card-title { font-size: 1.15rem; font-weight: 900; margin: 0 0 2px; }
     .card-sub { color: #888; font-size: .78rem; font-weight: 600; }
 
-    .chart-wrap { position: relative; height: 280px; }
+    .chart-wrap { position: relative; height: 100%; min-height: 240px; width: 100%; }
+    .chart-wrap canvas { width: 100% !important; height: 100% !important; }
+    .chart-card { display: flex; flex-direction: column; }
+    .chart-card .card-head { flex-shrink: 0; }
+    .chart-card .chart-wrap { flex: 1; }
     .chart-legend { display: flex; gap: 14px; font-size: .75rem; font-weight: 700; color: #555; }
     .legend-item { display: flex; align-items: center; gap: 6px; }
     .legend-dot { width: 10px; height: 10px; border-radius: 4px; border: 2px solid #0a0a0a; }
@@ -413,6 +417,8 @@ export class DashboardComponent implements OnDestroy {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2), // tajam tapi hemat
+        animation: { duration: 600, easing: 'easeOutQuart' },
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -431,6 +437,7 @@ export class DashboardComponent implements OnDestroy {
             grid: { color: 'rgba(0,0,0,.06)' },
             ticks: { font: { size: 11 } },
             border: { display: false },
+            beginAtZero: true,
           },
         },
       },
