@@ -1,0 +1,17 @@
+{
+  "name": "inventory-management",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Inventory Management — Angular 22 + Express + node:sqlite (frontend-backend satu repo, deploy Vercel)",
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "seed": "npm --prefix server run seed",
+    "dev": "concurrently -n API,WEB -c yellow,cyan \"npm --prefix server run dev\" \"npm --prefix client start\"",
+    "build": "npm --prefix client run build",
+    "build:prod": "npm --prefix client run build && node client/scripts/inject-api-base.js",
+    "start": "npm --prefix server start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

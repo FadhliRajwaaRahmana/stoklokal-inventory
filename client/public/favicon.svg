@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8be9e"/>
+      <stop offset="1" stop-color="#ffd8c2"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#bg)" stroke="#0a0a0a" stroke-width="4"/>
+  <!-- Kotak box (simbol inventory) -->
+  <path d="M20 26 L32 19 L44 26 L44 38 L32 45 L20 38 Z" fill="#ffffff" stroke="#0a0a0a" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M20 26 L32 33 L44 26" fill="none" stroke="#0a0a0a" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M32 33 L32 45" fill="none" stroke="#0a0a0a" stroke-width="3.5" stroke-linejoin="round"/>
+</svg>
