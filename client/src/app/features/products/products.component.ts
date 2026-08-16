@@ -35,8 +35,8 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
       (action)="openModal()"
     />
 
-    <!-- Toolbar: search + filter -->
-    <div class="toolbar card" gsapReveal [gsapRevealY]="24">
+    <!-- Toolbar: search + filter (z-index agar dropdown melayang di atas card tabel) -->
+    <div class="toolbar card" style="position: relative; z-index: 50;">
       <div class="search-box">
         <app-icon name="search" [size]="18" />
         <input

@@ -27,6 +27,9 @@ export interface SelectOption<T = string | number> {
   selector: 'app-kawaii-select',
   standalone: true,
   imports: [CommonModule, FormsModule, IconComponent],
+  host: {
+    '[class.ks-host--open]': 'open'
+  },
   template: `
     <div class="ks" [class.ks--open]="open" [class.ks--error]="error">
       <!-- Trigger -->
@@ -96,7 +99,9 @@ export interface SelectOption<T = string | number> {
   `,
   styles: [`
     :host { display: block; position: relative; }
+    :host(.ks-host--open) { z-index: 99999; }
     .ks { position: relative; width: 100%; }
+    .ks--open { z-index: 99999; }
 
     /* ----- Trigger ----- */
     .ks-trigger {
