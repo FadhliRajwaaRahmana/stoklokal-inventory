@@ -135,7 +135,7 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
         </button>
       </div>
 
-      <div class="table-wrap">
+      <div class="table-wrap" data-lenis-prevent>
         <table class="table">
           <thead>
             <tr>

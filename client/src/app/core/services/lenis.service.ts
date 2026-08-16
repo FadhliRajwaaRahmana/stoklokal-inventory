@@ -25,6 +25,19 @@ export class LenisService {
       syncTouch: true,          // smooth scroll di touch/mobile
       syncTouchLerp: 0.12,      // kehalusan sentuh (makin kecil makin smooth)
       touchMultiplier: 1.4,
+      // ----- Fix scroll horizontal di mobile -----
+      // Lenis dengan syncTouch meng-intercept SEMUA gesture sentuh → scroll
+      // horizontal pada area scrollable (tabel, dropdown, chips) ter-block.
+      // prevent() membiarkan elemen dengan data-lenis-prevent discroll NATIF
+      // (sentuh horizontal tetap jalan, smooth vertical tetap aktif di luar).
+      prevent: (node: HTMLElement) => {
+        if (!node || node.nodeType !== 1) return false;
+        if (node.hasAttribute?.('data-lenis-prevent')) return true;
+        return (
+          node.scrollHeight > node.clientHeight ||
+          node.scrollWidth > node.clientWidth
+        ) && getComputedStyle(node).overflowY === 'auto';
+      },
     });
 
     // ----- Integrasi Lenis ⇄ GSAP ScrollTrigger (kunci smoothness) -----

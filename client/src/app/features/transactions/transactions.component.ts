@@ -40,7 +40,7 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
 
     <!-- Tabel riwayat -->
     <div class="card table-card" gsapReveal [gsapRevealDelay]="0.08">
-      <div class="table-wrap">
+      <div class="table-wrap" data-lenis-prevent>
         <table class="table">
           <thead>
             <tr>
@@ -184,7 +184,8 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
     .chip--in.chip--active { background: #bcffbe; }
     .chip--out.chip--active { background: #70d6ff; }
 
-    .table-card { padding: 0; overflow: hidden; }
+    .table-card { padding: 0; overflow: clip; }
+    @media (max-width: 640px) { .table-card { overflow: visible; } }
     .tx-time { color: #777; font-size: .8rem; white-space: nowrap; }
     .tx-sku { display: block; color: #999; font-size: .7rem; }
     .badge { display: inline-flex; padding: 4px 10px; border-radius: 9999px; font-size: .72rem; font-weight: 800; border: 2px solid #0a0a0a; }

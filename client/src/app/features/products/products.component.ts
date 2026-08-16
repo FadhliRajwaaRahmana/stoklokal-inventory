@@ -82,7 +82,7 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
 
     <!-- Tabel produk -->
     <div class="card table-card" gsapReveal [gsapRevealDelay]="0.08">
-      <div class="table-wrap">
+      <div class="table-wrap" data-lenis-prevent>
         <table class="table">
           <thead>
             <tr>
@@ -277,7 +277,10 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
     .chip--low.chip--active { background: #ffd670; }
     .chip--out.chip--active { background: #ff7096; color: #fff; }
 
-    .table-card { padding: 0; overflow: hidden; }
+    .table-card { padding: 0; overflow: clip; }
+    @media (max-width: 640px) {
+      .table-card { overflow: visible; }
+    }
     .prod-cell { width: 46px; }
     .prod-avatar {
       width: 40px; height: 40px; border-radius: 14px; border: 2px solid #0a0a0a;

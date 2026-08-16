@@ -64,7 +64,7 @@ interface ParsedDetails {
 
     <!-- Daftar log -->
     <div class="card table-card" gsapReveal [gsapRevealDelay]="0.08">
-      <div class="table-wrap">
+      <div class="table-wrap" data-lenis-prevent>
         <table class="table">
           <thead>
             <tr>
@@ -161,7 +161,8 @@ interface ParsedDetails {
       .filter-chips { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
     }
 
-    .table-card { padding: 0; overflow: hidden; }
+    .table-card { padding: 0; overflow: clip; }
+    @media (max-width: 640px) { .table-card { overflow: visible; } }
     .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .table { min-width: 720px; }
     .time-col { min-width: 110px; }
