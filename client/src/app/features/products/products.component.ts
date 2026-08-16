@@ -255,7 +255,10 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
   styles: [`
     :host { display: block; }
     .card { background: #fff; border: 3px solid #0a0a0a; border-radius: 24px; box-shadow: 4px 4px 0 #0a0a0a; }
-    .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px; margin-bottom: 16px; }
+    /* Toolbar WAJIB overflow:visible — dropdown kawaii-select posisi absolute
+       keluar dari toolbar; overflow:hidden/clip memotongnya (menu hanya search
+       box yang terlihat, item hilang). */
+    .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px; margin-bottom: 16px; overflow: visible; }
     .search-box { position: relative; flex: 1; min-width: 200px; display: flex; align-items: center; }
     .search-box app-icon { position: absolute; left: 14px; color: #888; pointer-events: none; }
     .search-input { padding-left: 42px; }
