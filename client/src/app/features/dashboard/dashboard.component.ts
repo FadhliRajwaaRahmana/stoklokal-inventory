@@ -225,7 +225,7 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
     @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 560px) { .stats-grid { grid-template-columns: 1fr; } }
 
-    .dashboard-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 18px; margin-bottom: 26px; }
+    .dashboard-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 18px; margin-bottom: 26px; align-items: start; }
     @media (max-width: 960px) { .dashboard-grid { grid-template-columns: 1fr; } }
 
     .card { background: #fff; border: 3px solid #0a0a0a; border-radius: 24px; box-shadow: 4px 4px 0 #0a0a0a; padding: 22px; }
@@ -233,16 +233,22 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
     .card-title { font-size: 1.15rem; font-weight: 900; margin: 0 0 2px; }
     .card-sub { color: #888; font-size: .78rem; font-weight: 600; }
 
-    .chart-wrap { position: relative; height: 100%; min-height: 240px; width: 100%; }
+    .chart-wrap { position: relative; height: 280px; width: 100%; }
     .chart-wrap canvas { width: 100% !important; height: 100% !important; }
     .chart-card { display: flex; flex-direction: column; }
     .chart-card .card-head { flex-shrink: 0; }
-    .chart-card .chart-wrap { flex: 1; }
+    .chart-card .chart-wrap { flex: 0 0 auto; }
     .chart-legend { display: flex; gap: 14px; font-size: .75rem; font-weight: 700; color: #555; }
     .legend-item { display: flex; align-items: center; gap: 6px; }
     .legend-dot { width: 10px; height: 10px; border-radius: 4px; border: 2px solid #0a0a0a; }
 
-    .low-list { display: flex; flex-direction: column; }
+    .low-list {
+      display: flex; flex-direction: column;
+      max-height: 340px; overflow-y: auto; overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    .low-list::-webkit-scrollbar { width: 6px; }
+    .low-list::-webkit-scrollbar-thumb { background: #e5d9cf; border-radius: 6px; }
     .low-item {
       display: flex; align-items: center; gap: 12px; padding: 12px 10px; border-radius: 14px;
       border-bottom: 2px dashed #e8e0d6; cursor: pointer; transition: background .15s, transform .15s;
@@ -261,6 +267,12 @@ import { GsapRevealDirective } from '../../shared/directives/gsap-reveal.directi
     .low-all-good { color: #4a7c4f; font-weight: 700; text-align: center; padding: 24px 0; }
 
     .table-sku { display: block; color: #999; font-size: .7rem; }
+    .recent-card .table-wrap {
+      max-height: 380px; overflow-y: auto; overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    .recent-card .table-wrap::-webkit-scrollbar { width: 6px; }
+    .recent-card .table-wrap::-webkit-scrollbar-thumb { background: #e5d9cf; border-radius: 6px; }
     .badge { display: inline-flex; padding: 4px 10px; border-radius: 9999px; font-size: .72rem; font-weight: 800; border: 2px solid #0a0a0a; }
     .badge--in { background: #bcffbe; }
     .badge--out { background: #70d6ff; }
