@@ -17,12 +17,14 @@ export class LenisService {
   init(): void {
     if (!isPlatformBrowser(this.platformId) || this.lenis) return;
 
-    // Mobile & touch: auto smooth untuk native feel; desktop: Lenis
+    // Mobile & touch: aktifkan syncTouch agar scroll sentuh juga smooth (opsi 1 user)
     this.lenis = new Lenis({
       duration: 1.15,
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
-      touchMultiplier: 1.6,
+      syncTouch: true,          // smooth scroll di touch/mobile
+      syncTouchLerp: 0.12,      // kehalusan sentuh (makin kecil makin smooth)
+      touchMultiplier: 1.4,
     });
 
     // ----- Integrasi Lenis ⇄ GSAP ScrollTrigger (kunci smoothness) -----

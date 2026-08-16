@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "description": "Inventory Management — Angular 22 + Express + node:sqlite (frontend-backend satu repo, deploy Vercel)",
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "install:all": "npm --prefix server install && npm --prefix client install",
     "seed": "npm --prefix server run seed",
