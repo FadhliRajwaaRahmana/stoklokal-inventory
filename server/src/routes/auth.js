@@ -57,7 +57,7 @@ router.post('/register', async (req, res) => {
 
   const hash = bcrypt.hashSync(String(password), 10);
   const info = await db
-    .prepare('INSERT INTO users (name, email, password) VALUES (?, ?, ?)')
+    .prepare('INSERT INTO users (name, email, password, created_at) VALUES (?, ?, ?, datetime(\'now\', \'+7 hours\'))')
     .run(name.trim(), normalizedEmail, hash);
   recordSuccess(ip);
   const user = { id: info.lastInsertRowid, name: name.trim(), email: normalizedEmail };

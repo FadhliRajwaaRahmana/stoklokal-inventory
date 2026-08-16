@@ -92,9 +92,10 @@ router.post('/', async (req, res) => {
         return { changes: res.rowsAffected, lastInsertRowid: res.lastInsertRowid };
       },
     });
-    const info = await txPrepare('INSERT INTO transactions (user_id, product_id, type, qty, note) VALUES (?, ?, ?, ?, ?)').run(
-      [req.user.id, productId, type, qty, note]
-    );
+    const info = await txPrepare(
+      `INSERT INTO transactions (user_id, product_id, type, qty, note, created_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now', '+7 hours'))`
+    ).run([req.user.id, productId, type, qty, note]);
     insertedId = Number(info.lastInsertRowid);
     const delta = type === 'in' ? qty : -qty;
     await txPrepare('UPDATE products SET stock = stock + ? WHERE id = ? AND user_id = ?').run([delta, productId, req.user.id]);

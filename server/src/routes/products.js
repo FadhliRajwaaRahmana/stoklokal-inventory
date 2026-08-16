@@ -116,8 +116,8 @@ router.post('/', async (req, res) => {
   try {
     const info = await db
       .prepare(
-        `INSERT INTO products (user_id, name, sku, category_id, price, cost, stock, min_stock, image)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO products (user_id, name, sku, category_id, price, cost, stock, min_stock, image, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+7 hours'))`
       )
       .run(
         req.user.id,

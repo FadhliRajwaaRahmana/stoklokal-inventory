@@ -34,7 +34,7 @@ router.post('/', async (req, res) => {
 
   try {
     const info = await db
-      .prepare('INSERT INTO categories (user_id, name, description) VALUES (?, ?, ?)')
+      .prepare('INSERT INTO categories (user_id, name, description, created_at) VALUES (?, ?, ?, datetime(\'now\', \'+7 hours\'))')
       .run(req.user.id, name, description);
     const row = await db
       .prepare('SELECT * FROM categories WHERE id = ? AND ' + SCOPE)

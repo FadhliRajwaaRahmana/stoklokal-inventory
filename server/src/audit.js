@@ -33,8 +33,8 @@ export async function logAudit({ userId, actor, action, entity, entityId, detail
   try {
     await db
       .prepare(
-        `INSERT INTO audit_logs (user_id, actor, action, entity, entity_id, details, ip, user_agent)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO audit_logs (user_id, actor, action, entity, entity_id, details, ip, user_agent, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+7 hours'))`
       )
       .run(
         userId ?? null,

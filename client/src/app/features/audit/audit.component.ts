@@ -62,9 +62,10 @@ interface ParsedDetails {
       </div>
     </div>
 
-    <!-- Daftar log -->
+    <!-- Daftar log: tabel di desktop, kartu stacked di mobile -->
     <div class="card table-card" gsapReveal [gsapRevealDelay]="0.08">
-      <div class="table-wrap" data-lenis-prevent>
+      <!-- ===== Tabel (≥768px) ===== -->
+      <div class="table-wrap desktop-only" data-lenis-prevent>
         <table class="table">
           <thead>
             <tr>
@@ -131,6 +132,50 @@ interface ParsedDetails {
         </table>
       </div>
 
+      <!-- ===== Kartu stacked (<768px) ===== -->
+      <div class="audit-cards mobile-only">
+        <ng-container *ngIf="!loading && rows.length; else cardsEmpty">
+          <div class="audit-card" *ngFor="let log of rows">
+            <div class="audit-card-top">
+              <span class="badge" [class]="actionMeta(log.action).cls">{{ actionMeta(log.action).label }}</span>
+              <span class="audit-card-time">{{ fmtTime(log.created_at) }}</span>
+            </div>
+            <div class="audit-card-actor">
+              <span class="actor-avatar" [style.background]="avatarColor(log.actor)">{{ log.actor.charAt(0).toUpperCase() }}</span>
+              <div class="audit-card-actor-meta">
+                <strong>{{ log.actor || '—' }}</strong>
+                <small>{{ fmtDate(log.created_at) }} · IP {{ log.ip || '—' }}</small>
+              </div>
+              <span class="entity-chip">{{ entityLabel(log.entity) || '—' }}</span>
+              <small *ngIf="log.entity_id != null" class="entity-id">#{{ log.entity_id }}</small>
+            </div>
+            <div class="audit-card-detail">
+              <ng-container *ngIf="detailOf(log).before && detailOf(log).after; else plainCardDetail">
+                <span class="kv-diff">
+                  <span class="kv-old">{{ kvSummary(detailOf(log).before) }}</span>
+                  <span class="kv-arrow"><app-icon name="arrow-right" [size]="12" /></span>
+                  <span class="kv-new">{{ kvSummary(detailOf(log).after) }}</span>
+                </span>
+              </ng-container>
+              <ng-template #plainCardDetail>
+                <span class="kv-inline">{{ kvSummary(detailOf(log).rows) }}</span>
+              </ng-template>
+            </div>
+          </div>
+        </ng-container>
+        <ng-template #cardsEmpty>
+          <div class="loading-row" *ngIf="loading">
+            <app-skeleton [height]="18" /><app-skeleton [height]="18" /><app-skeleton [height]="18" /><app-skeleton [height]="18" />
+          </div>
+          <app-empty-state
+            *ngIf="!loading"
+            icon="clipboard"
+            title="Belum ada aktivitas"
+            description="Semua perubahan (tambah, ubah, hapus, login) akan tercatat di sini secara otomatis."
+          />
+        </ng-template>
+      </div>
+
       <div class="table-foot">
         <span class="count-label">{{ rows.length }} dari {{ total }} aktivitas</span>
         <div class="pager" *ngIf="total > limit">
@@ -165,6 +210,28 @@ interface ParsedDetails {
     @media (max-width: 640px) { .table-card { overflow: visible; } }
     .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .table { min-width: 720px; }
+
+    /* Tampilan: tabel hanya desktop, kartu hanya mobile */
+    .desktop-only { display: block; }
+    .mobile-only { display: none; }
+    @media (max-width: 767px) {
+      .desktop-only { display: none; }
+      .mobile-only { display: block; }
+    }
+
+    /* Kartu audit (mobile) — stacked, tidak overflow horizontal */
+    .audit-cards { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+    .audit-card {
+      border: 2px solid #0a0a0a; border-radius: 18px; background: #fff;
+      box-shadow: 3px 3px 0 #0a0a0a; padding: 14px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .audit-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .audit-card-time { font-weight: 800; font-size: .78rem; color: #555; }
+    .audit-card-actor { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .audit-card-actor-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+    .audit-card-actor-meta strong { font-size: .85rem; }
+    .audit-card-actor-meta small { color: #999; font-size: .7rem; }
+    .audit-card-detail { border-top: 2px dashed #eee; padding-top: 10px; }
     .time-col { min-width: 110px; }
     .ip-col { min-width: 110px; }
 

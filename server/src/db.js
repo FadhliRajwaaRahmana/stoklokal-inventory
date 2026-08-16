@@ -308,6 +308,40 @@ export async function initDb() {
   await exec(`CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_logs(user_id)`);
   await exec(`CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)`);
 
+  // ---------- Ensure created_at default = WIB (UTC+7) ----------
+  // Tabel yang dibuat SEBELUM fix WIB masih punya DEFAULT datetime('now') (UTC).
+  // CREATE TABLE IF NOT EXISTS tidak mengubah default — deteksi & rebuild idempotent.
+  for (const table of ['users', 'categories', 'products', 'transactions', 'audit_logs']) {
+    try {
+      const info = await client.execute(`PRAGMA table_info(${table})`);
+      const col = info.rows.find((r) => r && r.name === 'created_at');
+      if (col && String(col.dflt_value ?? '').includes('datetime(\'now\')') && !String(col.dflt_value).includes('+7 hours')) {
+        console.warn(`[db] Default created_at ${table} masih UTC — rebuild…`);
+        await rebuildTable({
+          table,
+          createSql: `CREATE TABLE ${table}_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ${table === 'users' ? 'name TEXT NOT NULL, email TEXT NOT NULL UNIQUE, password TEXT NOT NULL,' : ''}
+            ${table === 'categories' ? 'user_id INTEGER REFERENCES users(id), name TEXT NOT NULL, description TEXT DEFAULT \'\',' : ''}
+            ${table === 'products' ? 'user_id INTEGER REFERENCES users(id), name TEXT NOT NULL, sku TEXT NOT NULL, category_id INTEGER REFERENCES categories(id), price REAL NOT NULL DEFAULT 0, cost REAL NOT NULL DEFAULT 0, stock INTEGER NOT NULL DEFAULT 0, min_stock INTEGER NOT NULL DEFAULT 5, image TEXT DEFAULT \'\',' : ''}
+            ${table === 'transactions' ? 'user_id INTEGER REFERENCES users(id), product_id INTEGER NOT NULL REFERENCES products(id), type TEXT NOT NULL CHECK (type IN (\'in\', \'out\')), qty INTEGER NOT NULL, note TEXT DEFAULT \'\',' : ''}
+            ${table === 'audit_logs' ? 'user_id INTEGER REFERENCES users(id), actor TEXT DEFAULT \'\', action TEXT NOT NULL, entity TEXT NOT NULL DEFAULT \'\', entity_id INTEGER, details TEXT NOT NULL DEFAULT \'{}\', ip TEXT DEFAULT \'\', user_agent TEXT DEFAULT \'\',' : ''}
+            created_at TEXT NOT NULL DEFAULT (datetime('now', '+7 hours'))
+            ${table === 'categories' ? ', UNIQUE(name, user_id)' : ''}
+            ${table === 'products' ? ', UNIQUE(sku, user_id)' : ''}
+          )`,
+          copySql: (oldTable) => `INSERT INTO ${table}_new SELECT * FROM ${oldTable}`,
+          indexes: table === 'transactions' ? ['CREATE INDEX IF NOT EXISTS idx_transactions_created ON transactions(created_at)']
+            : table === 'audit_logs' ? ['CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_logs(user_id)', 'CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)']
+            : table === 'products' ? ['CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id)']
+            : undefined,
+        });
+      }
+    } catch (e) {
+      console.warn(`[db] Gagal ensure WIB default ${table}: ${e.message}`);
+    }
+  }
+
   // ---------- Adopsi data yatim (dari era single-user) → akun admin ----------
   // Data lama (sebelum multi-user) tidak punya user_id. Setelah migrasi kolom,
   // data tersebut "yatim" — tidak terlihat oleh user mana pun. Adopsi ke admin
