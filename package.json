@@ -5,7 +5,7 @@
   "description": "Inventory Management — Angular 22 + Express + node:sqlite (frontend-backend satu repo, deploy Vercel)",
   "type": "module",
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "scripts": {
     "install:all": "npm --prefix server install && npm --prefix client install",
